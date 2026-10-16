@@ -4,7 +4,6 @@ export type JugadorT = {
     goles: number
 }
 
-
 export type EquipoT = {
     id: number,
     nombre: string,

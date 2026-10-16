@@ -12,9 +12,7 @@ import {
     moveJugador
 } from "../controllers/futbol.controller.js";
 
-
 const router = Router();
-
 
 router.get("/", getEquipos);
 
@@ -25,7 +23,6 @@ router.post("/", createEquipo);
 router.put("/:id", changeEquipo);
 
 router.delete("/:id", deleteEquipo);
-
 
 router.get("/:id/jugadores", getJugadores);
 
@@ -40,6 +37,5 @@ router.patch(
     "/:id/jugadores/:jugadorId/mover",
     moveJugador
 );
-
 
 export default router;

@@ -2,10 +2,8 @@ import type { Request, Response } from "express";
 import { changeEquipos, equipos } from "../data/futbol.data.js";
 import type { EquipoT, JugadorT } from "../models/futbol.models.js";
 
-
 let equipoId = 1;
 let jugadorId = 1;
-
 
 const findEquipo = (id: number, res: Response) => {
 
@@ -21,10 +19,6 @@ const findEquipo = (id: number, res: Response) => {
     return equipo;
 }
 
-
-// EQUIPOS
-
-
 export const getEquipos = (
     req: Request,
     res: Response
@@ -32,7 +26,6 @@ export const getEquipos = (
 
     res.json(equipos);
 }
-
 
 export const getEquipoWithID = (
     req: Request,
@@ -48,32 +41,36 @@ export const getEquipoWithID = (
     }
 }
 
-
 export const createEquipo = (
     req: Request,
     res: Response
 ) => {
 
-    const {nombre, division} = req.body || {};
-
-    if(!nombre || typeof nombre !== "string" || nombre.trim()===""){
+    if(!req.body){
         res.status(400).json({
-            message: "Nombre obligatorio"
+            message: "Me tienes que pasar algo"
         })
         return
     }
 
-    if(!division || typeof division !== "string" || division.trim()===""){
+    if(!req.body.nombre){
         res.status(400).json({
-            message: "Division obligatoria"
+            message: "Necesito el nombre del equipo"
+        })
+        return
+    }
+
+    if(!req.body.division){
+        res.status(400).json({
+            message: "Necesito la division del equipo"
         })
         return
     }
 
     const nuevoEquipo: EquipoT = {
         id: equipoId,
-        nombre: nombre.trim(),
-        division: division.trim(),
+        nombre: req.body.nombre,
+        division: req.body.division,
         jugadores: []
     }
 
@@ -81,9 +78,11 @@ export const createEquipo = (
 
     equipos.push(nuevoEquipo);
 
-    res.status(201).json(nuevoEquipo);
+    res.status(201).json({
+        message: "Equipo creado correctamente",
+        equipo: nuevoEquipo
+    })
 }
-
 
 export const changeEquipo = (
     req: Request,
@@ -96,29 +95,44 @@ export const changeEquipo = (
 
     if(equipo){
 
-        const {nombre, division} = req.body || {};
-
-        if(!nombre || typeof nombre !== "string" || nombre.trim()===""){
+        if(!req.body){
             res.status(400).json({
-                message: "Nombre no valido"
+                message: "Me tienes que pasar algo"
             })
             return
         }
 
-        if(!division || typeof division !== "string" || division.trim()===""){
+        if(!req.body.nombre){
             res.status(400).json({
-                message: "Division no valida"
+                message: "Necesito el nombre"
             })
             return
         }
 
-        equipo.nombre = nombre.trim();
-        equipo.division = division.trim();
+        if(!req.body.division){
+            res.status(400).json({
+                message: "Necesito la division"
+            })
+            return
+        }
 
-        res.json(equipo);
+        const updatedEquipo: EquipoT = {
+            ...equipo,
+            ...req.body,
+            id: equipo.id,
+            jugadores: equipo.jugadores
+        }
+
+        changeEquipos(
+            equipos.map(x=>x.id===id?updatedEquipo:x)
+        );
+
+        res.json({
+            message: "Equipo actualizado",
+            equipo: updatedEquipo
+        })
     }
 }
-
 
 export const deleteEquipo = (
     req: Request,
@@ -141,10 +155,6 @@ export const deleteEquipo = (
     }
 }
 
-
-// JUGADORES
-
-
 export const getJugadores = (
     req: Request,
     res: Response
@@ -159,7 +169,6 @@ export const getJugadores = (
     }
 }
 
-
 export const addJugador = (
     req: Request,
     res: Response
@@ -169,43 +178,58 @@ export const addJugador = (
 
     const equipo = findEquipo(id,res);
 
-    if(equipo){
-
-        const {nombre, goles} = req.body || {};
-
-        if(!nombre || typeof nombre !== "string" || nombre.trim()===""){
-            res.status(400).json({
-                message: "Nombre de jugador obligatorio"
-            })
-            return
-        }
-
-        if(
-            goles === undefined ||
-            typeof goles !== "number" ||
-            goles < 0 ||
-            !Number.isInteger(goles)
-        ){
-            res.status(400).json({
-                message: "Goles debe ser un entero mayor o igual a 0"
-            })
-            return
-        }
-
-        const nuevoJugador: JugadorT = {
-            id: jugadorId,
-            nombre: nombre.trim(),
-            goles: goles
-        }
-
-        jugadorId++;
-
-        equipo.jugadores.push(nuevoJugador);
-
-        res.status(201).json(nuevoJugador);
+    if(!equipo){
+        return
     }
-}
 
+    if(!req.body){
+        res.status(400).json({
+            message: "Me tienes que pasar algo"
+        })
+        return
+    }
+
+    if(!req.body.nombre){
+        res.status(400).json({
+            message: "Necesito el nombre del jugador"
+        })
+        return
+    }
+
+    if(req.body.goles === undefined){
+        res.status(400).json({
+            message: "Necesito los goles"
+        })
+        return
+    }
+
+    const goles = Number(req.body.goles);
+
+    if(
+        goles < 0 ||
+        !Number.isInteger(goles)
+    ){
+        res.status(400).json({
+            message: "Goles incorrectos"
+        })
+        return
+    }
+
+    const nuevoJugador: JugadorT = {
+        id: jugadorId,
+        nombre: req.body.nombre,
+        goles: goles
+    }
+
+    jugadorId++;
+
+    equipo.jugadores.push(nuevoJugador);
+
+    res.status(201).json({
+        message: "Jugador creado correctamente",
+        jugador: nuevoJugador
+    })
+}
 
 export const deleteJugador = (
     req: Request,
@@ -213,33 +237,34 @@ export const deleteJugador = (
 ) => {
 
     const id = Number(req.params.id);
-    const idJugador = Number(req.params.jugadorId);
+
+    const jugadorId = Number(req.params.jugadorId);
 
     const equipo = findEquipo(id,res);
 
-    if(equipo){
-
-        const jugador = equipo.jugadores.find(
-            x=>x.id===idJugador
-        );
-
-        if(!jugador){
-            res.status(404).json({
-                message: "No existe el jugador"
-            })
-            return
-        }
-
-        equipo.jugadores = equipo.jugadores.filter(
-            x=>x.id!==idJugador
-        );
-
-        res.json({
-            message: "Jugador eliminado"
-        })
+    if(!equipo){
+        return
     }
-}
 
+    const jugador = equipo.jugadores.find(
+        x=>x.id===jugadorId
+    );
+
+    if(!jugador){
+        res.status(404).json({
+            message: "No existe el jugador"
+        })
+        return
+    }
+
+    equipo.jugadores = equipo.jugadores.filter(
+        x=>x.id!==jugadorId
+    );
+
+    res.json({
+        message: "Jugador eliminado"
+    })
+}
 
 export const moveJugador = (
     req: Request,
@@ -247,34 +272,47 @@ export const moveJugador = (
 ) => {
 
     const id = Number(req.params.id);
-    const idJugador = Number(req.params.jugadorId);
 
-    const {equipoDestinoId} = req.body || {};
+    const jugadorId = Number(req.params.jugadorId);
 
-    const destinoId = Number(equipoDestinoId);
-
-    if(!equipoDestinoId || isNaN(destinoId)){
+    if(!req.body){
         res.status(400).json({
-            message: "Equipo destino no valido"
+            message: "Me tienes que pasar algo"
         })
         return
     }
 
-    if(id===destinoId){
+    if(!req.body.equipoDestinoId){
+        res.status(400).json({
+            message: "Necesito el equipo destino"
+        })
+        return
+    }
+
+    const equipoDestinoId = Number(
+        req.body.equipoDestinoId
+    );
+
+    if(id===equipoDestinoId){
         res.status(400).json({
             message: "No puede ir al mismo equipo"
         })
         return
     }
 
-    const equipoOrigen = findEquipo(id,res);
+    const equipoOrigen = equipos.find(
+        x=>x.id===id
+    );
 
     if(!equipoOrigen){
+        res.status(404).json({
+            message: "No existe el equipo origen"
+        })
         return
     }
 
     const equipoDestino = equipos.find(
-        x=>x.id===destinoId
+        x=>x.id===equipoDestinoId
     );
 
     if(!equipoDestino){
@@ -285,7 +323,7 @@ export const moveJugador = (
     }
 
     const jugador = equipoOrigen.jugadores.find(
-        x=>x.id===idJugador
+        x=>x.id===jugadorId
     );
 
     if(!jugador){
@@ -295,9 +333,10 @@ export const moveJugador = (
         return
     }
 
-    equipoOrigen.jugadores = equipoOrigen.jugadores.filter(
-        x=>x.id!==idJugador
-    );
+    equipoOrigen.jugadores =
+        equipoOrigen.jugadores.filter(
+            x=>x.id!==jugadorId
+        );
 
     equipoDestino.jugadores.push(jugador);
 
